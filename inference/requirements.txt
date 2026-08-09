@@ -1,0 +1,9 @@
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+tensorflow==2.15.*
+tensorflow-model-optimization
+paho-mqtt<2.0
+psutil

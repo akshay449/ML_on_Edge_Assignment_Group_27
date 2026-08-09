@@ -1,0 +1,120 @@
+---
+# =========================================================
+# LogiBridge - Edge Deployment Playbook (Task E2)
+# =========================================================
+# Exactly 7 tasks, matching the project brief:
+#   1. Create /opt/logibridge directory if not present
+#   2. Copy new model file to /opt/logibridge/model.tflite
+#   3. Copy updated reference_dist.json
+#   4. Stop the running inference container if running
+#   5. Pull updated container image from local Docker registry
+#   6. Start inference container with environment variables
+#   7. Wait 15 seconds and verify container is running
+#
+# Idempotency: tasks 4 and 6 only act when the model/reference-dist copy
+# actually changed something (or the container isn't already running in
+# the right state). Run this playbook twice with no source changes in
+# between and the second run should report changed=0.
+#
+# Requires: ansible-galaxy collection install community.docker
+# =========================================================
+
+- name: Deploy LogiBridge Edge Inference Container to Fleet Node
+  hosts: edge_nodes
+  become: yes
+
+  vars:
+    app_dir: "/opt/logibridge"
+    model_dest: "{{ app_dir }}/model.tflite"
+    reference_dist_dest: "{{ app_dir }}/reference_dist.json"
+    # NOTE: defaults to M2 (logibridge_int8.tflite, 93.22% accuracy, verified) rather
+    # than M3 (logibridge_pruned_int8.tflite) until M3 is retrained at the corrected
+    # 35% pruning sparsity (see prune_quantise.py) and its accuracy is re-verified
+    # >= 88% with Class-2 recall >= 95%. Switch this back to the pruned variant once
+    # that re-verification is done and documented in the benchmark results.
+    source_model: "../models/logibridge_int8.tflite"
+    source_reference_dist: "../monitoring/reference_dist.json"
+    container_name: "logibridge_edge"
+    image_name: "localhost:5000/logibridge-inference:v1.0"
+    mqtt_broker: "host.docker.internal"
+    truck_id: "truck_001"
+
+  tasks:
+    - name: "Task 1 - Create /opt/logibridge directory if not present"
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: '0755'
+
+    - name: "Task 2 - Copy new model file to /opt/logibridge/model.tflite"
+      copy:
+        src: "{{ source_model }}"
+        dest: "{{ model_dest }}"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: '0644'
+      register: model_copy_result
+
+    - name: "Task 3 - Copy updated reference_dist.json"
+      copy:
+        src: "{{ source_reference_dist }}"
+        dest: "{{ reference_dist_dest }}"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: '0644'
+      register: ref_copy_result
+
+    - name: "Task 4 - Stop the running inference container if running"
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: stopped
+      ignore_errors: yes
+      # Only bounce the container if the model or reference distribution
+      # actually changed -- this is what keeps a second, no-op run at
+      # changed=0 instead of restarting the container every single time.
+      when: model_copy_result.changed or ref_copy_result.changed
+
+    - name: "Task 5 - Pull updated container image from local Docker registry"
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        source: pull
+
+    - name: "Task 6 - Start inference container with environment variables"
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        env:
+          MQTT_BROKER: "{{ mqtt_broker }}"
+          TRUCK_ID: "{{ truck_id }}"
+          MODEL_PATH: "/app/models/model.tflite"
+        volumes:
+          - "{{ model_dest }}:/app/models/model.tflite"
+          - "{{ reference_dist_dest }}:/app/monitoring/reference_dist.json"
+      # docker_container is itself idempotent: if the container is already
+      # running with this exact image/env/volumes config, this reports
+      # changed=false rather than recreating it.
+
+    - name: "Task 7 - Wait 15 seconds and verify container is running"
+      block:
+        - name: Wait 15 seconds for container startup
+          ansible.builtin.pause:
+            seconds: 15
+
+        - name: Verify container is running
+          ansible.builtin.command: >
+            docker ps --filter name={{ container_name }} --filter status=running -q
+          register: container_status
+          changed_when: false
+
+        - name: Fail deployment if container is not running
+          ansible.builtin.fail:
+            msg: "Container '{{ container_name }}' is not running after deployment!"
+          when: container_status.stdout == ""
+
+        - name: Display deployment summary
+          ansible.builtin.debug:
+            msg: "LogiBridge Edge Service successfully deployed! Container '{{ container_name }}' is active."

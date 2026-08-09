@@ -1,0 +1,104 @@
+[
+  {
+    "model": "cold_chain_model.tflite",
+    "size_kb": 5.40234375,
+    "avg_latency_ms": 0.0010950001887977123,
+    "p95_latency_ms": 0.001200009137392044,
+    "accuracy_pct": 98.71794871794873,
+    "class2_recall_pct": 97.22222222222223,
+    "per_class_recall": {
+      "0": 100.0,
+      "1": 100.0,
+      "2": 97.22222222222223
+    },
+    "confusion_matrix": {
+      "0": {
+        "0": 24,
+        "1": 0,
+        "2": 0
+      },
+      "1": {
+        "0": 0,
+        "1": 18,
+        "2": 0
+      },
+      "2": {
+        "0": 0,
+        "1": 1,
+        "2": 35
+      }
+    },
+    "energy_mj": 0.0010484850232198248,
+    "cpu_percent": 12.1,
+    "energy_note": "measured",
+    "energy_accum_runs": 432769
+  },
+  {
+    "model": "logibridge_int8.tflite",
+    "size_kb": 4.609375,
+    "avg_latency_ms": 0.0010924995876848698,
+    "p95_latency_ms": 0.001200009137392044,
+    "accuracy_pct": 100.0,
+    "class2_recall_pct": 100.0,
+    "per_class_recall": {
+      "0": 100.0,
+      "1": 100.0,
+      "2": 100.0
+    },
+    "confusion_matrix": {
+      "0": {
+        "0": 24,
+        "1": 0,
+        "2": 0
+      },
+      "1": {
+        "0": 0,
+        "1": 18,
+        "2": 0
+      },
+      "2": {
+        "0": 0,
+        "1": 0,
+        "2": 36
+      }
+    },
+    "energy_mj": 0.0010463890670107995,
+    "cpu_percent": 11.9,
+    "energy_note": "measured",
+    "energy_accum_runs": 426469
+  },
+  {
+    "model": "logibridge_pruned_int8.tflite",
+    "size_kb": 4.5390625,
+    "avg_latency_ms": 0.0009674995089881122,
+    "p95_latency_ms": 0.0010999530786648393,
+    "accuracy_pct": 100.0,
+    "class2_recall_pct": 100.0,
+    "per_class_recall": {
+      "0": 100.0,
+      "1": 100.0,
+      "2": 100.0
+    },
+    "confusion_matrix": {
+      "0": {
+        "0": 24,
+        "1": 0,
+        "2": 0
+      },
+      "1": {
+        "0": 0,
+        "1": 18,
+        "2": 0
+      },
+      "2": {
+        "0": 0,
+        "1": 0,
+        "2": 36
+      }
+    },
+    "energy_mj": 0.0008715129047954894,
+    "cpu_percent": 10.7,
+    "energy_note": "measured",
+    "energy_accum_runs": 460407
+  }
+]
